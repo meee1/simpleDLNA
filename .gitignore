@@ -12,3 +12,4 @@ setup/Release
 setup/*.cmd
 pages/
 cov-int*
+/.vs/sdlna/v15/Server/sqlite3
