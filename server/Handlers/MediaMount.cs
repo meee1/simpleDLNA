@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
@@ -157,7 +157,7 @@ namespace NMaier.SimpleDlna.Server
       doc.SelectSingleNode("//*[local-name() = 'modelNumber']").InnerText =
         Assembly.GetExecutingAssembly().GetName().Version.ToString();
       doc.SelectSingleNode("//*[local-name() = 'friendlyName']").InnerText =
-        FriendlyName + " — sdlna";
+        FriendlyName + " - sdlna";
 
       doc.SelectSingleNode(
         "//*[text() = 'urn:schemas-upnp-org:service:ContentDirectory:1']/../*[local-name() = 'SCPDURL']").InnerText =
