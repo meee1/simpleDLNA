@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Timers;
 using NMaier.SimpleDlna.Utilities;
 using Timer = System.Timers.Timer;
@@ -116,12 +117,87 @@ namespace NMaier.SimpleDlna.Server.Ssdp
         messageQueue.TryDequeue(out msg);
       }
       datagramPosted.Set();
-      queueTimer.Enabled = messageQueue.Count != 0;
+      //queueTimer.Enabled = messageQueue.Count != 0;
       queueTimer.Interval = random.Next(25, running ? 75 : 50);
     }
 
     private void Receive()
     {
+      Task.Run(() => {
+        again:
+        try
+        {
+          var endpoint = new IPEndPoint(IPAddress.Any, SSDP_PORT);
+          var received = client.Receive(ref endpoint);
+
+          if (received == null)
+          {
+            throw new IOException("Didn't receive anything");
+          }
+          if (received.Length == 0)
+          {
+            throw new IOException("Didn't receive any bytes");
+          }
+#if DUMP_ALL_SSDP
+          DebugFormat("{0} - SSDP Received a datagram", endpoint);
+#endif
+
+          using (var reader = new StreamReader(
+            new MemoryStream(received), Encoding.ASCII))
+          {
+            var proto = reader.ReadLine();
+            if (proto == null)
+            {
+              throw new IOException("Couldn't read protocol line");
+            }
+
+            proto = proto.Trim();
+            if (string.IsNullOrEmpty(proto))
+            {
+              throw new IOException("Invalid protocol line");
+            }
+
+            var method = proto.Split(new[] { ' ' }, 2)[0];
+            var headers = new Headers();
+            for (var line = reader.ReadLine();
+              line != null;
+              line = reader.ReadLine())
+            {
+              line = line.Trim();
+              if (string.IsNullOrEmpty(line))
+              {
+                break;
+              }
+
+              var parts = line.Split(new[] { ':' }, 2);
+              headers[parts[0]] = parts[1].Trim();
+            }
+#if DUMP_ALL_SSDP
+            DebugFormat("{0} - Datagram method: {1}", endpoint, method);
+            Debug(headers);
+#endif
+            if (method == "M-SEARCH")
+            {
+              RespondToSearch(endpoint, headers["st"]);
+            }
+          }
+
+          goto again;
+        }
+        catch (IOException ex)
+        {
+          Debug("Failed to read SSDP message", ex);
+        }
+        catch (Exception ex)
+        {
+          Warn("Failed to read SSDP message", ex);
+        }
+
+        goto again;
+      });
+
+      return;
+
       try {
         client.BeginReceive(ReceiveCallback, null);
       }
@@ -132,7 +208,7 @@ namespace NMaier.SimpleDlna.Server.Ssdp
     private void ReceiveCallback(IAsyncResult result)
     {
       try {
-        var endpoint = new IPEndPoint(IPAddress.None, SSDP_PORT);
+        var endpoint = new IPEndPoint(IPAddress.Any, SSDP_PORT);
         var received = client.EndReceive(result, ref endpoint);
         if (received == null) {
           throw new IOException("Didn't receive anything");
@@ -143,36 +219,59 @@ namespace NMaier.SimpleDlna.Server.Ssdp
 #if DUMP_ALL_SSDP
         DebugFormat("{0} - SSDP Received a datagram", endpoint);
 #endif
-        using (var reader = new StreamReader(
-          new MemoryStream(received), Encoding.ASCII)) {
-          var proto = reader.ReadLine();
-          if (proto == null) {
-            throw new IOException("Couldn't read protocol line");
-          }
-          proto = proto.Trim();
-          if (string.IsNullOrEmpty(proto)) {
-            throw new IOException("Invalid protocol line");
-          }
-          var method = proto.Split(new[] {' '}, 2)[0];
-          var headers = new Headers();
-          for (var line = reader.ReadLine();
-            line != null;
-            line = reader.ReadLine()) {
-            line = line.Trim();
-            if (string.IsNullOrEmpty(line)) {
-              break;
-            }
-            var parts = line.Split(new[] {':'}, 2);
-            headers[parts[0]] = parts[1].Trim();
-          }
+        Task.Run(() =>
+        {
+          try
+          {
+            using (var reader = new StreamReader(
+              new MemoryStream(received), Encoding.ASCII))
+            {
+              var proto = reader.ReadLine();
+              if (proto == null)
+              {
+                throw new IOException("Couldn't read protocol line");
+              }
+
+              proto = proto.Trim();
+              if (string.IsNullOrEmpty(proto))
+              {
+                throw new IOException("Invalid protocol line");
+              }
+
+              var method = proto.Split(new[] {' '}, 2)[0];
+              var headers = new Headers();
+              for (var line = reader.ReadLine();
+                line != null;
+                line = reader.ReadLine())
+              {
+                line = line.Trim();
+                if (string.IsNullOrEmpty(line))
+                {
+                  break;
+                }
+
+                var parts = line.Split(new[] {':'}, 2);
+                headers[parts[0]] = parts[1].Trim();
+              }
 #if DUMP_ALL_SSDP
-          DebugFormat("{0} - Datagram method: {1}", endpoint, method);
-          Debug(headers);
+              DebugFormat("{0} - Datagram method: {1}", endpoint, method);
+              Debug(headers);
 #endif
-          if (method == "M-SEARCH") {
-            RespondToSearch(endpoint, headers["st"]);
+              if (method == "M-SEARCH")
+              {
+                RespondToSearch(endpoint, headers["st"]);
+              }
+            }
           }
-        }
+          catch (IOException ex)
+          {
+            Debug("Failed to read SSDP message", ex);
+          }
+          catch (Exception ex)
+          {
+            Warn("Failed to read SSDP message", ex);
+          }
+        });
       }
       catch (IOException ex) {
         Debug("Failed to read SSDP message", ex);
@@ -180,6 +279,7 @@ namespace NMaier.SimpleDlna.Server.Ssdp
       catch (Exception ex) {
         Warn("Failed to read SSDP message", ex);
       }
+  
       Receive();
     }
 

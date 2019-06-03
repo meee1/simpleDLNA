@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -367,10 +367,13 @@ namespace NMaier.SimpleDlna.Server
         var e = (from ext in i
                  select ext.ToUpperInvariant()).ToList();
         try {
-          Media2Ext.Add(t, e);
+          if(Media2Ext.ContainsKey(t))
+            Media2Ext[t].AddRange(e);
+          else
+            Media2Ext.Add(t, e);
         }
         catch (ArgumentException) {
-          Media2Ext[t].AddRange(e);
+          
         }
         foreach (var ext in e) {
           Ext2Media.Add(ext.ToUpperInvariant(), t);

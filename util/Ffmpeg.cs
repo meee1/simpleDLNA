@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -81,7 +81,8 @@ namespace NMaier.SimpleDlna.Utilities
         foreach (var p in envpath.
           Split(isWin ? ';' : ':')) {
           try {
-            places.Add(new DirectoryInfo(p.Trim()));
+            if(Directory.Exists(p))
+              places.Add(new DirectoryInfo(p.Trim()));
           }
           catch (Exception) {
             // ignored
@@ -102,6 +103,8 @@ namespace NMaier.SimpleDlna.Utilities
         };
         foreach (var di in folders) {
           try {
+            if(!Directory.Exists(di.FullName))
+              continue;
             var r = di.GetFiles(executable, SearchOption.TopDirectoryOnly);
             if (r.Length != 0) {
               var rv = r[0];
