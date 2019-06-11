@@ -95,11 +95,11 @@ namespace NMaier.SimpleDlna.GUI
         {
           FriendlyName = Description.Name
         };
-#if !DEBUG
+//#if !DEBUG
         if (cacheFile != null) {
           fileServer.SetCacheFile(cacheFile);
         }
-#endif
+//#endif
         fileServer.Changing += (o, e) => { InternalState = State.Refreshing; };
         fileServer.Changed += (o, e) => { InternalState = Description.Active ? State.Running : State.Stopped; };
         fileServer.Load();

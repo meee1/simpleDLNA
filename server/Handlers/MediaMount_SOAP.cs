@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Xml;
@@ -369,8 +369,29 @@ namespace NMaier.SimpleDlna.Server
       }
 
       var root = GetItem(id) as IMediaFolder;
-      if (root == null) {
-        throw new ArgumentException("Invalid id");
+      if (root == null)
+      {
+        var result1 = new XmlDocument();
+
+        var didl1 = result1.CreateElement(string.Empty, "DIDL-Lite", NS_DIDL);
+        didl1.SetAttribute("xmlns:dc", NS_DC);
+        didl1.SetAttribute("xmlns:dlna", NS_DLNA);
+        didl1.SetAttribute("xmlns:upnp", NS_UPNP);
+        didl1.SetAttribute("xmlns:sec", NS_SEC);
+        result1.AppendChild(didl1);
+
+        var item = GetItem(id);
+
+        Browse_AddItem(request, result1, item as IMediaResource);
+
+        return  new AttributeCollection
+        {
+          {"Result", result1.OuterXml},
+          {"NumberReturned", 1.ToString()},
+          {"TotalMatches", 1.ToString()},
+          {"UpdateID", systemID.ToString()}
+        };
+        //throw new ArgumentException("Invalid id");
       }
       var result = new XmlDocument();
 

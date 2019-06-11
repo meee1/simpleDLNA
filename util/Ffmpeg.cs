@@ -152,9 +152,9 @@ namespace NMaier.SimpleDlna.Utilities
     {
       using (var p = new Process()) {
         var sti = p.StartInfo;
-#if !DEBUG
+//#if !DEBUG
         sti.CreateNoWindow = true;
-#endif
+//#endif
         sti.UseShellExecute = false;
         sti.FileName = FFmpegExecutable;
         sti.Arguments = $"-i \"{file.FullName}\"";
@@ -251,9 +251,9 @@ namespace NMaier.SimpleDlna.Utilities
       try {
         using (var p = new Process()) {
           var sti = p.StartInfo;
-#if !DEBUG
+//#if !DEBUG
           sti.CreateNoWindow = true;
-#endif
+//#endif
           sti.UseShellExecute = false;
           sti.FileName = FFmpegExecutable;
           sti.Arguments = $"-i \"{file.FullName}\" -map s:0 -f srt pipe:";
